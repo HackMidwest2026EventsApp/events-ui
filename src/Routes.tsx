@@ -1,9 +1,14 @@
 import { createBrowserRouter } from "react-router";
-import App from "./App";
+import Events from "./pages/Events/Events";
+import { Event } from "./pages/Event/Event";
 
 export const router = createBrowserRouter([
   {
     path: "/",
-    Component: App,
+    Component: Events,
+  },
+  {
+    path: ":eventId",
+    Component: Event,
   },
 ]);
