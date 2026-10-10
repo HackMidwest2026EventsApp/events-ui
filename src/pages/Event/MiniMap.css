@@ -1,0 +1,77 @@
+
+.mini-map {
+  position: relative;
+  width: 100%;
+  height: 320px;
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  background: #fff;
+  font-family: Arial, sans-serif;
+}
+
+.mini-map-header {
+  height: 68px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.mini-map-header h3 {
+  margin: 0 0 5px;
+  font-size: 16px;
+  color: #111827;
+}
+
+.mini-map-header p {
+  margin: 0;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.mini-map-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.mini-map-actions button {
+  width: 38px;
+  height: 38px;
+  border: 1px solid #e5e7eb;
+  border-radius: 9px;
+  background: white;
+  cursor: pointer;
+  font-size: 22px;
+}
+
+.mini-map-canvas {
+  width: 100%;
+  height: 252px;
+  min-height: 200px;
+}
+
+.mini-map:fullscreen {
+  width: 100vw;
+  height: 100vh;
+  border: none;
+  border-radius: 0;
+}
+
+.mini-map:fullscreen .mini-map-canvas {
+  height: calc(100vh - 68px);
+}
+
+.mini-map-exit {
+  position: absolute;
+  top: 82px;
+  right: 16px;
+  z-index: 10;
+  padding: 10px 14px;
+  border: none;
+  border-radius: 8px;
+  background: white;
+  cursor: pointer;
+  box-shadow: 0 2px 8px #0003;
+}

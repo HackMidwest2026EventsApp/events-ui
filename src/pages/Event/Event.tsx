@@ -12,8 +12,8 @@ import {
 import { sampleEvents } from "../../resources/EventModel";
 import { useParams } from "react-router";
 import { useMemo } from "react";
-
-import kauffman from "../../assets/KauffmanCenter.png";
+//ImportMiniMap
+import MiniMap from "./MiniMap";
 import { IconCar, IconCloudSnow } from "@tabler/icons-react";
 
 export const Event = () => {
@@ -43,7 +43,7 @@ export const Event = () => {
       <Grid p={40}>
         <Grid.Col span={8}>
           <Box mb={20}>
-            <Image src={kauffman} w="100%" h="400" />
+            <MiniMap /> 
           </Box>
           <Grid>
             <Grid.Col span={4}>
