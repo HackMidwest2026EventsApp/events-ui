@@ -12,6 +12,7 @@ import {
 } from "@mantine/core";
 import { useParams } from "react-router";
 import MiniMap from "./MiniMap";
+import { Outfit } from "./Outfit";
 import { IconCar, IconCloudSnow } from "@tabler/icons-react";
 import type { EventModel } from "../../resources/EventModel";
 import { useQuery } from "@tanstack/react-query";
@@ -102,6 +103,7 @@ export const Event = () => {
               </Card>
             </Grid.Col>
           </Grid>
+          <Outfit event={currentEvent} />
         </Grid.Col>
         <Grid.Col px={20} span={4}>
           <Text>{currentEvent.summary}</Text>
