@@ -26,6 +26,7 @@ import {
 } from "@tabler/icons-react";
 import type { EventModel } from "../../resources/EventModel";
 import { useQuery } from "@tanstack/react-query";
+import { GoingButton } from "../../components/GoingButton";
 
 const RESTAURANT_RADIUS_METERS = 50_000;
 
@@ -113,16 +114,20 @@ export const Event = () => {
     <>
       <Box style={{ position: "relative" }}>
         <Image src={event.image_url} fit="cover" height={500}></Image>
-        <Title
-          style={{ position: "absolute", bottom: "0" }}
+        <Group
+          style={{ position: "absolute", bottom: 0 }}
           bg={alpha(theme.black, 0.8)}
           p={40}
           w="100%"
-          c={theme.white}
-          order={1}
+          justify="space-between"
+          wrap="nowrap"
+          align="center"
         >
-          {event.title}
-        </Title>
+          <Title c={theme.white} order={1}>
+            {event.title}
+          </Title>
+          <GoingButton event={event} />
+        </Group>
       </Box>
       <Grid p={40}>
         <Grid.Col span={8}>

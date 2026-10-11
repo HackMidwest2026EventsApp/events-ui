@@ -11,12 +11,22 @@
  *
  * Step 3 runs the LLM and takes ~20s on a cold event; the backend caches it for
  * an hour, so a revisit is immediate.
+ *
+ * Step 2 never saves under the signed-in account. The backend has one table
+ * for saved events, so a save there *is* the profile's "going to" list, and
+ * generating an outfit is something that happens just by opening an event
+ * page: writing it would put every event the user glanced at on their list.
+ * Only the explicit "I'm going" button adds to it (see ./savedEvents).
  */
 import type { EventModel } from "./EventModel";
 import type { EventRecommendation } from "./RecommendationModel";
-
-/** Trailing slash stripped so paths can be written with a leading one. */
-const API = import.meta.env.VITE_API.replace(/\/+$/, "");
+import {
+  API,
+  ApiError,
+  readToken as readSessionToken,
+  writeToken as writeSessionToken,
+} from "./api";
+import { listSavedEvents } from "./savedEvents";
 
 const GUEST_TOKEN_KEY = "events-ui.guest-token";
 
@@ -25,7 +35,7 @@ export const garmentImageUrl = (path: string) =>
   path.startsWith("http") ? path : `${API}${path}`;
 
 /** localStorage throws in private windows; a lost token only costs a re-register. */
-const readToken = (): string | null => {
+const readGuestToken = (): string | null => {
   try {
     return localStorage.getItem(GUEST_TOKEN_KEY);
   } catch {
@@ -33,7 +43,7 @@ const readToken = (): string | null => {
   }
 };
 
-const writeToken = (token: string | null) => {
+const writeGuestToken = (token: string | null) => {
   try {
     if (token === null) localStorage.removeItem(GUEST_TOKEN_KEY);
     else localStorage.setItem(GUEST_TOKEN_KEY, token);
@@ -68,7 +78,7 @@ const registerGuest = async (): Promise<string> => {
   });
   if (!res.ok) return failed("Guest sign-in", res);
   const { access_token } = (await res.json()) as { access_token: string };
-  writeToken(access_token);
+  writeGuestToken(access_token);
   return access_token;
 };
 
@@ -81,9 +91,32 @@ const registerGuest = async (): Promise<string> => {
  * with the id: /recommendations/generate 404s if they disagree.
  */
 const saveEvent = async (
-  dto: unknown,
+  dto: { provider: string; provider_event_id: string },
 ): Promise<{ id: number; token: string | null }> => {
-  const stored = readToken();
+  // An event already on the signed-in user's list has a row of its own, so
+  // reuse it: the outfit is then cached against the event they are actually
+  // going to, and counts against their plan rather than the shared guest
+  // quota. Reading the list cannot add to it, which is the point.
+  const session = readSessionToken();
+  if (session) {
+    try {
+      const mine = await listSavedEvents(session);
+      const owned = mine.find(
+        (saved) =>
+          saved.provider === dto.provider &&
+          saved.provider_event_id === dto.provider_event_id,
+      );
+      if (owned) return { id: owned.id, token: session };
+    } catch (error) {
+      // A token the API rejects is dead (they last a day); either way, fall
+      // back to the guest path rather than failing the outfit.
+      if (error instanceof ApiError && error.status === 401) {
+        writeSessionToken(null);
+      }
+    }
+  }
+
+  const stored = readGuestToken();
   if (!stored) {
     // The deployed API 500s here, and its 500s carry no CORS headers, so the
     // browser rejects the fetch instead of handing back the status. Either way
@@ -100,7 +133,7 @@ const saveEvent = async (
   let res = await post("/api/v1/events/save", dto, token);
   if (res.status === 401) {
     // The stored token expired (they last a day). Start a new guest.
-    writeToken(null);
+    writeGuestToken(null);
     token = await registerGuest();
     res = await post("/api/v1/events/save", dto, token);
   }
@@ -114,7 +147,9 @@ export const fetchRecommendation = async (
   const imported = await post("/api/v1/events/import-link", { url: event.url });
   if (!imported.ok) return failed("Importing the event", imported);
 
-  const { id, token } = await saveEvent(await imported.json());
+  const { id, token } = await saveEvent(
+    (await imported.json()) as { provider: string; provider_event_id: string },
+  );
 
   const generated = await post(
     "/api/v1/recommendations/generate",
