@@ -15,7 +15,7 @@ import {
   Title,
   useMantineTheme,
 } from "@mantine/core";
-import { useParams } from "react-router";
+import { useLocation, useParams } from "react-router";
 import MiniMap from "./MiniMap";
 import { Outfit } from "./Outfit";
 import {
@@ -32,6 +32,9 @@ import {
 import type { EventModel } from "../../resources/EventModel";
 import { useQuery } from "@tanstack/react-query";
 import { GoingButton } from "../../components/GoingButton";
+import { useAuth } from "../../resources/auth";
+import { getUberEstimate } from "../../resources/travel";
+import type { DestinationCoordinates } from "../../resources/travel";
 
 const RESTAURANT_RADIUS_METERS = 15_000;
 
@@ -57,6 +60,17 @@ const displayWeather = (weather: EventModel["weather"]) => {
   }
 };
 
+function isCoordinates(value: unknown): value is DestinationCoordinates {
+  if (typeof value !== "object" || value === null) return false;
+  const coords = value as Partial<DestinationCoordinates>;
+  return (
+    typeof coords.latitude === "number" &&
+    Number.isFinite(coords.latitude) &&
+    typeof coords.longitude === "number" &&
+    Number.isFinite(coords.longitude)
+  );
+}
+
 function getExternalHttpUrl(value: string | null): string | null {
   if (!value) return null;
 
@@ -72,7 +86,12 @@ function getExternalHttpUrl(value: string | null): string | null {
 
 export const Event = () => {
   const { eventId } = useParams<{ eventId: string }>();
+  const location = useLocation();
   const theme = useMantineTheme();
+  const { token } = useAuth();
+  const rideOrigin = isCoordinates(location.state?.rideOrigin)
+    ? location.state.rideOrigin
+    : undefined;
 
   const {
     data: currentEvent,
@@ -125,6 +144,27 @@ export const Event = () => {
     },
   });
 
+  const {
+    data: uberEstimate,
+    isPending: uberEstimatePending,
+    error: uberEstimateError,
+  } = useQuery({
+    queryKey: ["uberEstimate", eventId, token, rideOrigin],
+    enabled: !!currentEvent && token !== null,
+    retry: false,
+    staleTime: 120_000,
+    queryFn: ({ signal }) =>
+      getUberEstimate(
+        {
+          latitude: currentEvent!.latitude,
+          longitude: currentEvent!.longitude,
+        },
+        token!,
+        rideOrigin,
+        signal,
+      ),
+  });
+
   if (isPending) {
     return <Loader />;
   }
@@ -160,9 +200,15 @@ export const Event = () => {
           <Box mb={20}>
             <MiniMap />
           </Box>
-          <Grid>
-            <Grid.Col span={4}>
-              <Card withBorder display="flex" style={{ alignItems: "center" }}>
+          <Grid align="stretch">
+            <Grid.Col span={6} style={{ display: "flex" }}>
+              <Card
+                withBorder
+                display="flex"
+                w="100%"
+                h="100%"
+                style={{ alignItems: "center" }}
+              >
                 <Card.Section p={40}>
                   <Box display="flex">
                     {event.weather && displayWeather(event.weather)}
@@ -192,35 +238,43 @@ export const Event = () => {
                 </Card.Section>
               </Card>
             </Grid.Col>
-            <Grid.Col span={4}>
-              <Card withBorder display="flex" style={{ alignItems: "center" }}>
+            <Grid.Col span={6} style={{ display: "flex" }}>
+              <Card
+                withBorder
+                display="flex"
+                w="100%"
+                h="100%"
+                style={{ alignItems: "center" }}
+              >
                 <Card.Section p={40}>
                   <Box display="flex">
                     <IconCar size={35} />
                     <Text size="xl" ml="md">
-                      <NumberFormatter
-                        value={49.34}
-                        prefix="$"
-                        decimalScale={2}
-                      />
+                      {uberEstimate ? (
+                        uberEstimate.fare_display
+                      ) : uberEstimatePending ? (
+                        "…"
+                      ) : (
+                        "—"
+                      )}
                     </Text>
                   </Box>
-                </Card.Section>
-              </Card>
-            </Grid.Col>
-            <Grid.Col span={4}>
-              <Card withBorder display="flex" style={{ alignItems: "center" }}>
-                <Card.Section p={40}>
-                  <Box display="flex">
-                    <IconCar size={35} />
-                    <Text size="xl" ml="md">
-                      <NumberFormatter
-                        value={49.34}
-                        prefix="$"
-                        decimalScale={2}
-                      />
+                  <Text size="sm" c="dimmed" mt="xs">
+                    {uberEstimate
+                      ? uberEstimate.source === "uber_api"
+                        ? `${uberEstimate.product} fare estimate`
+                        : "Estimated Uber fare"
+                      : token
+                        ? uberEstimateError instanceof Error
+                          ? uberEstimateError.message
+                          : "Loading Uber estimate…"
+                        : "Sign in to estimate fare"}
+                  </Text>
+                  {uberEstimate?.pickup_eta_min != null && (
+                    <Text size="xs" c="dimmed" mt={4}>
+                      About {uberEstimate.pickup_eta_min} min pickup
                     </Text>
-                  </Box>
+                  )}
                 </Card.Section>
               </Card>
             </Grid.Col>

@@ -260,6 +260,11 @@ export const Events = () => {
               <Link
                 key={event.id}
                 to={`/${event.id}`}
+                state={{
+                  rideOrigin: origin
+                    ? { latitude: origin.lat, longitude: origin.long }
+                    : null,
+                }}
                 style={{ textDecoration: "none" }}
               >
                 <Card

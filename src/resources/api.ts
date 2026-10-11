@@ -61,13 +61,15 @@ interface Options {
   /** Sent form-encoded instead -- /auth/login takes an OAuth2 password form. */
   form?: Record<string, string>;
   token?: string | null;
+  signal?: AbortSignal;
 }
 
 export const api = async <T>(path: string, options: Options = {}): Promise<T> => {
-  const { method, body, form, token } = options;
+  const { method, body, form, token, signal } = options;
 
   const res = await fetch(`${API}${path}`, {
     method: method ?? (body || form ? "POST" : "GET"),
+    signal,
     headers: {
       ...(form
         ? { "Content-Type": "application/x-www-form-urlencoded" }
