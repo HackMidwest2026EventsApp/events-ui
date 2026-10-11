@@ -11,7 +11,6 @@ import {
   Box,
 } from "@mantine/core";
 import {
-  IconCalendarEvent,
   IconCompass,
   IconLogin,
   IconLogout,
