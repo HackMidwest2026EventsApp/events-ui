@@ -16,15 +16,31 @@ import {
 } from "@mantine/core";
 import { IconSearch, IconMapPin, IconCalendarEvent } from "@tabler/icons-react";
 import { Link } from "react-router";
-import { sampleEvents } from "../../resources/EventModel";
+import { useQuery } from "@tanstack/react-query";
+import type { EventModel } from "../../resources/EventModel";
 
-const GOOGLE_MAPS_API_KEY = "YOUR_GOOGLE_MAPS_API_KEY";
+const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+const API_URL = import.meta.env.VITE_API;
 
 export const Events = () => {
   const [eventSearch, setEventSearch] = useState<string>("");
   const [citySearch, setCitySearch] = useState<string>("");
   const [locationLoading, setLocationLoading] = useState<boolean>(true);
   const [locationMessage, setLocationMessage] = useState<string>("");
+  const [latlong, setLatLong] = useState<
+    { lat: number; long: number } | undefined
+  >();
+
+  const { data } = useQuery<{ results: EventModel[] }>({
+    queryKey: ["searchEvents", latlong],
+    enabled: !!latlong,
+    queryFn: () =>
+      fetch(
+        `${API_URL}api/v1/events/search?latitude=${latlong?.lat}&longitude=${latlong?.long}`,
+      ).then((res) => res.json()),
+  });
+
+  console.log({ data });
 
   useEffect(() => {
     if (!navigator.geolocation) {
@@ -42,6 +58,8 @@ export const Events = () => {
           const response = await fetch(
             `https://maps.googleapis.com/maps/api/geocode/json?latlng=${coords.latitude},${coords.longitude}&key=${GOOGLE_MAPS_API_KEY}`,
           );
+
+          setLatLong({ lat: coords.latitude, long: coords.longitude });
 
           const data: {
             status: string;
@@ -92,16 +110,17 @@ export const Events = () => {
     );
   }, []);
 
-  const filteredEvents = sampleEvents.filter((event) => {
+  const filteredEvents = data?.results.filter((event) => {
     const search = eventSearch.toLowerCase();
     const city = citySearch.toLowerCase();
 
     const matchesEvent =
       event.title.toLowerCase().includes(search) ||
-      event.category.toLowerCase().includes(search) ||
-      event.location.toLowerCase().includes(search);
+      event.address.toLowerCase().includes(search);
 
-    const matchesCity = !city.trim() || event.city.toLowerCase().includes(city);
+    const matchesCity =
+      !city.trim() ||
+      event.address.toLocaleLowerCase().includes(city.toLocaleLowerCase());
 
     return matchesEvent && matchesCity;
   });
@@ -149,11 +168,11 @@ export const Events = () => {
         <Group justify="space-between" align="center">
           <Title order={2}>Upcoming Events</Title>
           <Badge variant="light" size="lg">
-            {filteredEvents.length} events
+            {filteredEvents?.length ?? 0} events
           </Badge>
         </Group>
 
-        {filteredEvents.length > 0 ? (
+        {filteredEvents && filteredEvents.length > 0 ? (
           <SimpleGrid
             cols={{ base: 1, xs: 2, md: 3 }}
             spacing="lg"
@@ -162,7 +181,7 @@ export const Events = () => {
             {filteredEvents.map((event) => (
               <Link to={`/${event.id}`} style={{ textDecoration: "none" }}>
                 <Card
-                  key={event.id}
+                  key={event.title}
                   withBorder
                   radius="lg"
                   padding="md"
@@ -170,14 +189,14 @@ export const Events = () => {
                   className="event-card"
                 >
                   <Card.Section>
-                    <Image src={event.image} height={180} alt={event.title} />
+                    <Image
+                      src={event.image_url}
+                      height={180}
+                      alt={event.title}
+                    />
                   </Card.Section>
 
                   <Stack gap="xs" mt="md">
-                    <Badge variant="light" w="fit-content">
-                      {event.category}
-                    </Badge>
-
                     <Title order={3} size="h4">
                       {event.title}
                     </Title>
@@ -185,14 +204,14 @@ export const Events = () => {
                     <Group gap={6}>
                       <IconCalendarEvent size={16} />
                       <Text size="sm" c="dimmed">
-                        {event.date}
+                        {event.start_time}
                       </Text>
                     </Group>
 
                     <Group gap={6}>
                       <IconMapPin size={16} />
                       <Text size="sm" c="dimmed">
-                        {event.location}, {event.city}
+                        {event.address}
                       </Text>
                     </Group>
                   </Stack>

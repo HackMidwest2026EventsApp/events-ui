@@ -1,11 +1,8 @@
-import React, { StrictMode } from "react";
 import { useEffect, useRef, useState } from "react";
 import { setOptions, importLibrary } from "@googlemaps/js-api-loader";
 import "./MiniMap.css";
 
-
 const API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-
 
 export default function MiniMap() {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -27,8 +24,9 @@ export default function MiniMap() {
       try {
         setOptions({ key: API_KEY });
 
-        const { Map } = (await importLibrary("maps")) as
-          google.maps.MapsLibrary;
+        const { Map } = (await importLibrary(
+          "maps",
+        )) as google.maps.MapsLibrary;
 
         if (cancelled || !containerRef.current) return;
 
@@ -44,7 +42,7 @@ export default function MiniMap() {
 
         const marker = new google.maps.Marker({
           map,
-          
+
           title: "Your location",
         });
 
@@ -74,7 +72,7 @@ export default function MiniMap() {
           () => {
             if (!cancelled) {
               setStatus(
-                "Location denied or unavailable. Showing default location."
+                "Location denied or unavailable. Showing default location.",
               );
             }
           },
@@ -82,7 +80,7 @@ export default function MiniMap() {
             enableHighAccuracy: true,
             timeout: 10000,
             maximumAge: 60000,
-          }
+          },
         );
       } catch (error) {
         console.error("Google Maps loading error:", error);
@@ -91,7 +89,7 @@ export default function MiniMap() {
           setStatus(
             error instanceof Error
               ? `Map error: ${error.message}`
-              : "Unable to load Google Maps."
+              : "Unable to load Google Maps.",
           );
         }
       }
@@ -114,18 +112,14 @@ export default function MiniMap() {
   useEffect(() => {
     function updateFullscreen() {
       setIsFullscreen(
-        document.fullscreenElement ===
-          containerRef.current?.parentElement
+        document.fullscreenElement === containerRef.current?.parentElement,
       );
     }
 
     document.addEventListener("fullscreenchange", updateFullscreen);
 
     return () => {
-      document.removeEventListener(
-        "fullscreenchange",
-        updateFullscreen
-      );
+      document.removeEventListener("fullscreenchange", updateFullscreen);
     };
   }, []);
 
@@ -168,7 +162,7 @@ export default function MiniMap() {
       },
       () => {
         setStatus("Could not access your current location.");
-      }
+      },
     );
   }
 

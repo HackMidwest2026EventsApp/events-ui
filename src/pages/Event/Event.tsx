@@ -4,31 +4,38 @@ import {
   Card,
   Grid,
   Image,
+  Loader,
   NumberFormatter,
   Text,
   Title,
   useMantineTheme,
 } from "@mantine/core";
-import { sampleEvents } from "../../resources/EventModel";
 import { useParams } from "react-router";
-import { useMemo } from "react";
-//ImportMiniMap
 import MiniMap from "./MiniMap";
 import { IconCar, IconCloudSnow } from "@tabler/icons-react";
+import type { EventModel } from "../../resources/EventModel";
+import { useQuery } from "@tanstack/react-query";
 
 export const Event = () => {
   const { eventId } = useParams<{ eventId: string }>();
   const theme = useMantineTheme();
 
-  const currentEvent = useMemo(
-    () => sampleEvents.find((event) => event.id === eventId),
-    [eventId],
-  );
+  const { data: currentEvent } = useQuery<EventModel>({
+    queryKey: ["searchEvents", eventId],
+    queryFn: () =>
+      fetch(`${import.meta.env.VITE_API}api/v1/events/${eventId}`).then((res) =>
+        res.json(),
+      ),
+  });
+
+  if (!currentEvent) {
+    return <Loader />;
+  }
 
   return (
     <>
       <Box style={{ position: "relative" }}>
-        <Image src={currentEvent?.image} fit="cover" height={500}></Image>
+        <Image src={currentEvent.image_url} fit="cover" height={500}></Image>
         <Title
           style={{ position: "absolute", bottom: "0" }}
           bg={alpha(theme.black, 0.8)}
@@ -43,7 +50,7 @@ export const Event = () => {
       <Grid p={40}>
         <Grid.Col span={8}>
           <Box mb={20}>
-            <MiniMap /> 
+            <MiniMap />
           </Box>
           <Grid>
             <Grid.Col span={4}>
@@ -97,24 +104,7 @@ export const Event = () => {
           </Grid>
         </Grid.Col>
         <Grid.Col px={20} span={4}>
-          <Text>
-            The Kansas City Ballet’s production of The Wizard of Oz is a
-            vibrant, full-length ballet choreographed by Septime Webre that
-            adapts L. Frank Baum’s classic story into a grand theatrical
-            experience. The production follows Dorothy Gale and her dog Toto
-            after they are swept away by a Kansas cyclone and deposited into the
-            magical Land of Oz. To find her way back home, Dorothy journeys
-            along the Yellow Brick Road—cleverly personified on stage by
-            athletic dancers known as the "Yellow Brick Roadies"—and builds an
-            eclectic group of companions including the Scarecrow, the Tin Man,
-            and the Cowardly Lion. Together, they confront the Wicked Witch of
-            the West, navigate the illusions of the mysterious Wizard, and
-            ultimately discover that there is no place like home. Performed at
-            the Kauffman Center for the Performing Arts, this visually
-            spectacular production features a live original score by Matthew
-            Pierce performed by the Kansas City Symphony, alongside elaborate
-            costumes, large-scale projections, and intricate puppetry.
-          </Text>
+          <Text>{currentEvent.summary}</Text>
         </Grid.Col>
       </Grid>
     </>
