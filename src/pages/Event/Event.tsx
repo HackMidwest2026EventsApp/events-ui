@@ -20,9 +20,14 @@ import MiniMap from "./MiniMap";
 import { Outfit } from "./Outfit";
 import {
   IconCar,
+  IconCloudFog,
+  IconCloudRain,
   IconCloudSnow,
   IconExternalLink,
   IconMapPin,
+  IconSun,
+  IconSunWind,
+  IconWind,
 } from "@tabler/icons-react";
 import type { EventModel } from "../../resources/EventModel";
 import { useQuery } from "@tanstack/react-query";
@@ -30,12 +35,36 @@ import { GoingButton } from "../../components/GoingButton";
 
 const RESTAURANT_RADIUS_METERS = 15_000;
 
+const displayWeather = (weather: EventModel["weather"]) => {
+  if (weather?.summary?.includes("Clear")) {
+    return <IconSun size={35} />;
+  } else if (
+    weather?.summary?.includes("Mostly Cloudy") ||
+    weather?.summary?.includes("Partly Cloudy")
+  ) {
+    return <IconSunWind size={35} />;
+  } else if (
+    weather?.summary?.includes("Snow") ||
+    weather?.summary?.includes("Sleet")
+  ) {
+    return <IconCloudSnow size={35} />;
+  } else if (weather?.summary?.includes("Fog")) {
+    return <IconCloudFog size={35} />;
+  } else if (weather?.summary?.includes("Wind")) {
+    return <IconWind size={35} />;
+  } else if (weather?.summary?.includes("Rain")) {
+    return <IconCloudRain size={35} />;
+  }
+};
+
 function getExternalHttpUrl(value: string | null): string | null {
   if (!value) return null;
 
   try {
     const url = new URL(value);
-    return url.protocol === "http:" || url.protocol === "https:" ? url.href : null;
+    return url.protocol === "http:" || url.protocol === "https:"
+      ? url.href
+      : null;
   } catch {
     return null;
   }
@@ -62,10 +91,7 @@ export const Event = () => {
     },
   });
 
-  const {
-    data: weatherEvent,
-    error: weatherError,
-  } = useQuery<EventModel>({
+  const { data: weatherEvent, error: weatherError } = useQuery<EventModel>({
     queryKey: ["eventWeather", eventId],
     enabled: !!currentEvent && !currentEvent.weather,
     queryFn: async () => {
@@ -140,6 +166,7 @@ export const Event = () => {
                 <Card.Section p={40}>
                   <Box display="flex">
                     <IconCloudSnow size={35} />
+                    {event.weather && displayWeather(event.weather)}
                     <Text ml="md" size="xl">
                       {event.weather?.temperature != null ? (
                         <NumberFormatter
@@ -237,66 +264,74 @@ export const Event = () => {
                 Unable to load nearby restaurants. {restaurantsError.message}
               </Text>
             )}
-            {!restaurantsPending && !restaurantsError && (
-              restaurantEvent.nearby_restaurants?.length ? (
+            {!restaurantsPending &&
+              !restaurantsError &&
+              (restaurantEvent.nearby_restaurants?.length ? (
                 <Stack gap="sm">
-                  {restaurantEvent.nearby_restaurants.map((restaurant, index) => {
-                  const websiteUrl = getExternalHttpUrl(restaurant.website_url);
-                  const osmUrl = getExternalHttpUrl(restaurant.osm_url);
+                  {restaurantEvent.nearby_restaurants.map(
+                    (restaurant, index) => {
+                      const websiteUrl = getExternalHttpUrl(
+                        restaurant.website_url,
+                      );
+                      const osmUrl = getExternalHttpUrl(restaurant.osm_url);
 
-                  return (
-                    <Card
-                      key={`${restaurant.name}-${index}`}
-                      withBorder
-                      padding="sm"
-                      radius="md"
-                    >
-                      <Group justify="space-between" align="flex-start" wrap="nowrap">
-                        <Box style={{ minWidth: 0 }}>
-                          <Text fw={600} lineClamp={2}>
-                            {restaurant.name}
-                          </Text>
-                        </Box>
-                        {osmUrl && (
-                          <Button
-                            component="a"
-                            href={osmUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            variant="subtle"
-                            size="compact-sm"
-                            px={8}
-                            leftSection={<IconMapPin size={15} />}
-                            aria-label={`View ${restaurant.name} on OpenStreetMap`}
-                          >
-                            Map
-                          </Button>
-                        )}
-                      </Group>
-                      {websiteUrl && (
-                        <Button
-                          component="a"
-                          href={websiteUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          variant="light"
-                          size="compact-sm"
-                          mt="xs"
-                          leftSection={<IconExternalLink size={15} />}
+                      return (
+                        <Card
+                          key={`${restaurant.name}-${index}`}
+                          withBorder
+                          padding="sm"
+                          radius="md"
                         >
-                          Visit website
-                        </Button>
-                      )}
-                    </Card>
-                  );
-                  })}
+                          <Group
+                            justify="space-between"
+                            align="flex-start"
+                            wrap="nowrap"
+                          >
+                            <Box style={{ minWidth: 0 }}>
+                              <Text fw={600} lineClamp={2}>
+                                {restaurant.name}
+                              </Text>
+                            </Box>
+                            {osmUrl && (
+                              <Button
+                                component="a"
+                                href={osmUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                variant="subtle"
+                                size="compact-sm"
+                                px={8}
+                                leftSection={<IconMapPin size={15} />}
+                                aria-label={`View ${restaurant.name} on OpenStreetMap`}
+                              >
+                                Map
+                              </Button>
+                            )}
+                          </Group>
+                          {websiteUrl && (
+                            <Button
+                              component="a"
+                              href={websiteUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              variant="light"
+                              size="compact-sm"
+                              mt="xs"
+                              leftSection={<IconExternalLink size={15} />}
+                            >
+                              Visit website
+                            </Button>
+                          )}
+                        </Card>
+                      );
+                    },
+                  )}
                 </Stack>
               ) : (
                 <Text size="sm" c="dimmed">
                   No nearby restaurants found within 20 km.
                 </Text>
-              )
-            )}
+              ))}
           </Card>
         </Grid.Col>
       </Grid>
