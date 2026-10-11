@@ -28,7 +28,7 @@ import type { EventModel } from "../../resources/EventModel";
 import { useQuery } from "@tanstack/react-query";
 import { GoingButton } from "../../components/GoingButton";
 
-const RESTAURANT_RADIUS_METERS = 50_000;
+const RESTAURANT_RADIUS_METERS = 15_000;
 
 function getExternalHttpUrl(value: string | null): string | null {
   if (!value) return null;
@@ -256,11 +256,6 @@ export const Event = () => {
                           <Text fw={600} lineClamp={2}>
                             {restaurant.name}
                           </Text>
-                          {restaurant.cuisine !== "Not specified" && (
-                            <Badge mt={6} size="sm" variant="light" color="gray">
-                              {restaurant.cuisine}
-                            </Badge>
-                          )}
                         </Box>
                         {osmUrl && (
                           <Button
