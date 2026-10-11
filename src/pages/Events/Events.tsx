@@ -110,17 +110,19 @@ export const Events = () => {
     );
   }, []);
 
+  const search = eventSearch.trim().toLowerCase();
+  const city = citySearch.trim().toLowerCase();
+
   const filteredEvents = data?.results.filter((event) => {
-    const search = eventSearch.toLowerCase();
-    const city = citySearch.toLowerCase();
+    // address and venue_name come back null for online events, so every field
+    // read here has to tolerate a missing one or the whole grid throws.
+    const haystack = [event.title, event.venue_name, event.address]
+      .filter((field): field is string => !!field)
+      .join(" ")
+      .toLowerCase();
 
-    const matchesEvent =
-      event.title.toLowerCase().includes(search) ||
-      event.address.toLowerCase().includes(search);
-
-    const matchesCity =
-      !city.trim() ||
-      event.address.toLocaleLowerCase().includes(city.toLocaleLowerCase());
+    const matchesEvent = !search || haystack.includes(search);
+    const matchesCity = !city || haystack.includes(city);
 
     return matchesEvent && matchesCity;
   });
@@ -179,9 +181,12 @@ export const Events = () => {
             verticalSpacing="lg"
           >
             {filteredEvents.map((event) => (
-              <Link to={`/${event.id}`} style={{ textDecoration: "none" }}>
+              <Link
+                key={event.id}
+                to={`/${event.id}`}
+                style={{ textDecoration: "none" }}
+              >
                 <Card
-                  key={event.title}
                   withBorder
                   radius="lg"
                   padding="md"

@@ -1,6 +1,6 @@
 export interface EventModel {
   id: string;
-  address: string;
+  address: string | null;
   distance_mi: number;
   end_time: string; // ISO 8601 format (e.g., "2026-10-13T15:00:00Z")
   image_url: string;
@@ -16,5 +16,5 @@ export interface EventModel {
   timezone: string;
   title: string;
   url: string;
-  venue_name: string;
+  venue_name: string | null;
 }
