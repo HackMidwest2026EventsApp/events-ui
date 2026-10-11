@@ -1,11 +1,16 @@
 import {
   alpha,
+  Badge,
   Box,
+  Button,
   Card,
+  Divider,
+  Group,
   Grid,
   Image,
   Loader,
   NumberFormatter,
+  Stack,
   Text,
   Title,
   useMantineTheme,
@@ -13,30 +18,101 @@ import {
 import { useParams } from "react-router";
 import MiniMap from "./MiniMap";
 import { Outfit } from "./Outfit";
-import { IconCar, IconCloudSnow } from "@tabler/icons-react";
+import {
+  IconCar,
+  IconCloudSnow,
+  IconExternalLink,
+  IconMapPin,
+} from "@tabler/icons-react";
 import type { EventModel } from "../../resources/EventModel";
 import { useQuery } from "@tanstack/react-query";
+
+const RESTAURANT_RADIUS_METERS = 50_000;
+
+function getExternalHttpUrl(value: string | null): string | null {
+  if (!value) return null;
+
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:" ? url.href : null;
+  } catch {
+    return null;
+  }
+}
 
 export const Event = () => {
   const { eventId } = useParams<{ eventId: string }>();
   const theme = useMantineTheme();
 
-  const { data: currentEvent } = useQuery<EventModel>({
-    queryKey: ["searchEvents", eventId],
-    queryFn: () =>
-      fetch(`${import.meta.env.VITE_API}api/v1/events/${eventId}`).then((res) =>
-        res.json(),
-      ),
+  const {
+    data: currentEvent,
+    isPending,
+    error,
+  } = useQuery<EventModel>({
+    queryKey: ["event", eventId],
+    queryFn: async () => {
+      const response = await fetch(
+        `${import.meta.env.VITE_API}api/v1/events/${eventId}`,
+      );
+      if (!response.ok) {
+        throw new Error(`Could not load event (${response.status})`);
+      }
+      return response.json() as Promise<EventModel>;
+    },
   });
 
-  if (!currentEvent) {
+  const {
+    data: weatherEvent,
+    error: weatherError,
+  } = useQuery<EventModel>({
+    queryKey: ["eventWeather", eventId],
+    enabled: !!currentEvent && !currentEvent.weather,
+    queryFn: async () => {
+      const response = await fetch(
+        `${import.meta.env.VITE_API}api/v1/events/${eventId}/weather`,
+        { method: "POST" },
+      );
+      if (!response.ok) {
+        throw new Error(`Weather unavailable (${response.status})`);
+      }
+      return response.json() as Promise<EventModel>;
+    },
+  });
+
+  const {
+    data: restaurantsEvent,
+    isPending: restaurantsPending,
+    error: restaurantsError,
+  } = useQuery<EventModel>({
+    queryKey: ["eventRestaurants", eventId, RESTAURANT_RADIUS_METERS],
+    enabled: !!currentEvent,
+    queryFn: async ({ signal }) => {
+      const response = await fetch(
+        `${import.meta.env.VITE_API}api/v1/events/${encodeURIComponent(eventId ?? "")}/nearby-restaurants?radius_meters=${RESTAURANT_RADIUS_METERS}`,
+        { method: "POST", signal },
+      );
+      if (!response.ok) {
+        throw new Error(`Restaurants unavailable (${response.status})`);
+      }
+      return response.json() as Promise<EventModel>;
+    },
+  });
+
+  if (isPending) {
     return <Loader />;
   }
+
+  if (error || !currentEvent) {
+    return <Text c="red">Unable to load this event. {error?.message}</Text>;
+  }
+
+  const event = weatherEvent ?? currentEvent;
+  const restaurantEvent = restaurantsEvent ?? currentEvent;
 
   return (
     <>
       <Box style={{ position: "relative" }}>
-        <Image src={currentEvent.image_url} fit="cover" height={500}></Image>
+        <Image src={event.image_url} fit="cover" height={500}></Image>
         <Title
           style={{ position: "absolute", bottom: "0" }}
           bg={alpha(theme.black, 0.8)}
@@ -45,7 +121,7 @@ export const Event = () => {
           c={theme.white}
           order={1}
         >
-          {currentEvent?.title}
+          {event.title}
         </Title>
       </Box>
       <Grid p={40}>
@@ -60,13 +136,24 @@ export const Event = () => {
                   <Box display="flex">
                     <IconCloudSnow size={35} />
                     <Text ml="md" size="xl">
-                      <NumberFormatter
-                        value={35}
-                        suffix=" °F"
-                        decimalScale={1}
-                      />
+                      {event.weather?.temperature != null ? (
+                        <NumberFormatter
+                          value={event.weather.temperature}
+                          suffix=" °F"
+                          decimalScale={1}
+                        />
+                      ) : (
+                        "—"
+                      )}
                     </Text>
                   </Box>
+                  <Text size="sm" c="dimmed" mt="xs">
+                    {event.weather?.summary ??
+                      (weatherError ? "Weather unavailable" : "Loading weather…")}
+                    {event.weather
+                      ? ` · ${event.weather.time}`
+                      : ""}
+                  </Text>
                 </Card.Section>
               </Card>
             </Grid.Col>
@@ -106,7 +193,101 @@ export const Event = () => {
           <Outfit event={currentEvent} />
         </Grid.Col>
         <Grid.Col px={20} span={4}>
-          <Text>{currentEvent.summary}</Text>
+          <Text mb="lg">{event.summary}</Text>
+          <Card withBorder mb="lg">
+            <Group justify="space-between" align="flex-start" mb="xs">
+              <Box>
+                <Title order={3}>Nearby restaurants</Title>
+                <Text size="sm" c="dimmed">
+                  Within {RESTAURANT_RADIUS_METERS / 1000} km of the venue
+                </Text>
+              </Box>
+              {restaurantEvent.nearby_restaurants && (
+                <Badge variant="light" color="teal">
+                  {restaurantEvent.nearby_restaurants.length} found
+                </Badge>
+              )}
+            </Group>
+            <Divider mb="md" />
+            {restaurantsPending && (
+              <Group gap="sm">
+                <Loader size="xs" />
+                <Text size="sm" c="dimmed">
+                  Finding nearby restaurants…
+                </Text>
+              </Group>
+            )}
+            {restaurantsError && (
+              <Text size="sm" c="red" role="alert">
+                Unable to load nearby restaurants. {restaurantsError.message}
+              </Text>
+            )}
+            {!restaurantsPending && !restaurantsError && (
+              restaurantEvent.nearby_restaurants?.length ? (
+                <Stack gap="sm">
+                  {restaurantEvent.nearby_restaurants.map((restaurant, index) => {
+                  const websiteUrl = getExternalHttpUrl(restaurant.website_url);
+                  const osmUrl = getExternalHttpUrl(restaurant.osm_url);
+
+                  return (
+                    <Card
+                      key={`${restaurant.name}-${index}`}
+                      withBorder
+                      padding="sm"
+                      radius="md"
+                    >
+                      <Group justify="space-between" align="flex-start" wrap="nowrap">
+                        <Box style={{ minWidth: 0 }}>
+                          <Text fw={600} lineClamp={2}>
+                            {restaurant.name}
+                          </Text>
+                          {restaurant.cuisine !== "Not specified" && (
+                            <Badge mt={6} size="sm" variant="light" color="gray">
+                              {restaurant.cuisine}
+                            </Badge>
+                          )}
+                        </Box>
+                        {osmUrl && (
+                          <Button
+                            component="a"
+                            href={osmUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            variant="subtle"
+                            size="compact-sm"
+                            px={8}
+                            leftSection={<IconMapPin size={15} />}
+                            aria-label={`View ${restaurant.name} on OpenStreetMap`}
+                          >
+                            Map
+                          </Button>
+                        )}
+                      </Group>
+                      {websiteUrl && (
+                        <Button
+                          component="a"
+                          href={websiteUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          variant="light"
+                          size="compact-sm"
+                          mt="xs"
+                          leftSection={<IconExternalLink size={15} />}
+                        >
+                          Visit website
+                        </Button>
+                      )}
+                    </Card>
+                  );
+                  })}
+                </Stack>
+              ) : (
+                <Text size="sm" c="dimmed">
+                  No nearby restaurants found within 20 km.
+                </Text>
+              )
+            )}
+          </Card>
         </Grid.Col>
       </Grid>
     </>

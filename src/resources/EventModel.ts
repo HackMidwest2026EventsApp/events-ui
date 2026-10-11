@@ -17,4 +17,22 @@ export interface EventModel {
   title: string;
   url: string;
   venue_name: string | null;
+  weather: {
+    time: string;
+    summary: string | null;
+    temperature: number | null;
+    apparentTemperature: number | null;
+    precipProbability: number | null;
+    precipIntensity: number | null;
+    precipType: string | null;
+    windSpeed: number | null;
+    humidity: number | null;
+  } | null;
+  nearby_restaurants: {
+    name: string;
+    cuisine: string;
+    website_url: string | null;
+    osm_url: string | null;
+  }[] | null;
+  nearby_restaurants_radius_meters: number | null;
 }
