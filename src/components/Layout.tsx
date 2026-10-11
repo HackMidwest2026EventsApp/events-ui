@@ -8,9 +8,11 @@ import {
   Text,
   Title,
   UnstyledButton,
+  Box,
 } from "@mantine/core";
 import {
   IconCalendarEvent,
+  IconCompass,
   IconLogin,
   IconLogout,
   IconUserCircle,
@@ -30,7 +32,12 @@ export const Layout = () => {
       <AppShell.Header>
         <Group h="100%" px="md" justify="space-between" wrap="nowrap">
           <UnstyledButton component={Link} to="/" aria-label="All events">
-            <IconCalendarEvent size={26} />
+            <Box display="flex" style={{ alignItems: "center" }}>
+              <IconCompass size={26} />
+              <Text size="xl" fw="bolder" component="span" ml="sm">
+                Event Compass
+              </Text>
+            </Box>
           </UnstyledButton>
 
           <Menu position="bottom-end" width={220} withArrow>

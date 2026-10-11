@@ -25,7 +25,8 @@ export const GoingButton = ({ event }: { event: EventModel }) => {
 
   const going = useMutation({
     mutationFn: () => goingToEvent(event, token!),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["savedEvents"] }),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["savedEvents"] }),
   });
 
   if (!token) {
