@@ -153,12 +153,22 @@ export const Event = () => {
                     </Text>
                   </Box>
                   <Text size="sm" c="dimmed" mt="xs">
-                    {event.weather?.summary ??
-                      (weatherError ? "Weather unavailable" : "Loading weather…")}
                     {event.weather
-                      ? ` · ${event.weather.time}`
-                      : ""}
+                      ? `${event.weather.summary ?? "—"} · ${event.weather.time}`
+                      : weatherError
+                        ? "Weather unavailable"
+                        : "Loading weather…"}
                   </Text>
+                  {/* The hourly forecast only reaches about a week out. Past
+                      that the API returns the nearest hour it has, which is
+                      today's -- useful as a seasonal hint, wrong to present
+                      as the forecast for the date. */}
+                  {event.weather?.approximate && (
+                    <Text size="xs" c="dimmed" mt={4} fs="italic">
+                      Nearest available reading — too far out for an hourly
+                      forecast
+                    </Text>
+                  )}
                 </Card.Section>
               </Card>
             </Grid.Col>

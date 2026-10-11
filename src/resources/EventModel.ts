@@ -19,6 +19,10 @@ export interface EventModel {
   venue_name: string | null;
   weather: {
     time: string;
+    /** The event is past the hourly horizon, so `time` is the nearest hour on
+     *  record rather than the event's own. Say so rather than passing it off
+     *  as a forecast for the date. */
+    approximate: boolean;
     summary: string | null;
     temperature: number | null;
     apparentTemperature: number | null;
