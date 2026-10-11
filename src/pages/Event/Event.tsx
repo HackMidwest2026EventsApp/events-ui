@@ -165,7 +165,6 @@ export const Event = () => {
               <Card withBorder display="flex" style={{ alignItems: "center" }}>
                 <Card.Section p={40}>
                   <Box display="flex">
-                    <IconCloudSnow size={35} />
                     {event.weather && displayWeather(event.weather)}
                     <Text ml="md" size="xl">
                       {event.weather?.temperature != null ? (
@@ -190,12 +189,6 @@ export const Event = () => {
                       that the API returns the nearest hour it has, which is
                       today's -- useful as a seasonal hint, wrong to present
                       as the forecast for the date. */}
-                  {event.weather?.approximate && (
-                    <Text size="xs" c="dimmed" mt={4} fs="italic">
-                      Nearest available reading — too far out for an hourly
-                      forecast
-                    </Text>
-                  )}
                 </Card.Section>
               </Card>
             </Grid.Col>
