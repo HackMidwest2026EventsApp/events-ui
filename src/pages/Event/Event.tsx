@@ -33,7 +33,7 @@ import type { EventModel } from "../../resources/EventModel";
 import { useQuery } from "@tanstack/react-query";
 import { GoingButton } from "../../components/GoingButton";
 import { useAuth } from "../../resources/auth";
-import { getUberEstimate } from "../../resources/travel";
+import { getTravelPlan } from "../../resources/travel";
 import type { DestinationCoordinates } from "../../resources/travel";
 
 const RESTAURANT_RADIUS_METERS = 15_000;
@@ -145,16 +145,23 @@ export const Event = () => {
   });
 
   const {
-    data: uberEstimate,
-    isPending: uberEstimatePending,
-    error: uberEstimateError,
+    data: travelPlan,
+    isPending: travelPlanPending,
+    error: travelPlanError,
   } = useQuery({
-    queryKey: ["uberEstimate", eventId, token, rideOrigin],
-    enabled: !!currentEvent && token !== null,
+    queryKey: ["travelPlan", eventId, token, rideOrigin],
+    enabled:
+      !!currentEvent &&
+      !currentEvent.is_online &&
+      token !== null &&
+      isCoordinates({
+        latitude: currentEvent.latitude,
+        longitude: currentEvent.longitude,
+      }),
     retry: false,
     staleTime: 120_000,
     queryFn: ({ signal }) =>
-      getUberEstimate(
+      getTravelPlan(
         {
           latitude: currentEvent!.latitude,
           longitude: currentEvent!.longitude,
@@ -243,39 +250,82 @@ export const Event = () => {
                 withBorder
                 display="flex"
                 w="100%"
-                h="100%"
-                style={{ alignItems: "center" }}
+                style={{ alignItems: "stretch", alignSelf: "flex-start" }}
               >
-                <Card.Section p={40}>
-                  <Box display="flex">
-                    <IconCar size={35} />
-                    <Text size="xl" ml="md">
-                      {uberEstimate ? (
-                        uberEstimate.fare_display
-                      ) : uberEstimatePending ? (
-                        "…"
-                      ) : (
-                        "—"
-                      )}
+                <Stack p="sm" gap="xs" w="100%">
+                  <Group gap="xs">
+                    <IconCar size={19} />
+                    <Title order={5}>Best way to get there</Title>
+                  </Group>
+                  {currentEvent.is_online ? (
+                    <Text size="sm" c="dimmed">
+                      This is an online event.
                     </Text>
-                  </Box>
-                  <Text size="sm" c="dimmed" mt="xs">
-                    {uberEstimate
-                      ? uberEstimate.source === "uber_api"
-                        ? `${uberEstimate.product} fare estimate`
-                        : "Estimated Uber fare"
-                      : token
-                        ? uberEstimateError instanceof Error
-                          ? uberEstimateError.message
-                          : "Loading Uber estimate…"
-                        : "Sign in to estimate fare"}
-                  </Text>
-                  {uberEstimate?.pickup_eta_min != null && (
-                    <Text size="xs" c="dimmed" mt={4}>
-                      About {uberEstimate.pickup_eta_min} min pickup
+                  ) : !token ? (
+                    <Text size="sm" c="dimmed">
+                      Sign in to compare travel options.
+                    </Text>
+                  ) : !isCoordinates({
+                      latitude: currentEvent.latitude,
+                      longitude: currentEvent.longitude,
+                    }) ? (
+                    <Text size="sm" c="dimmed">
+                      Venue location is unavailable for this event.
+                    </Text>
+                  ) : travelPlanPending ? (
+                    <Group gap="sm">
+                      <Loader size="xs" />
+                      <Text size="sm" c="dimmed">
+                        Comparing ways to get there…
+                      </Text>
+                    </Group>
+                  ) : travelPlanError ? (
+                    <Text size="sm" c="red" role="alert">
+                      Unable to compare travel options.{" "}
+                      {travelPlanError instanceof Error
+                        ? travelPlanError.message
+                        : "Please try again."}
+                    </Text>
+                  ) : travelPlan ? (
+                    <>
+                      <Group justify="space-between" wrap="nowrap">
+                        <Badge color="teal" variant="light">
+                          {travelPlan.recommended_mode}
+                        </Badge>
+                        <Text size="sm" c="dimmed">
+                          {travelPlan.options.find(
+                            (option) =>
+                              option.mode === travelPlan.recommended_mode,
+                          )?.eta_min ?? "—"}{" "}
+                          min
+                        </Text>
+                      </Group>
+                      {travelPlan.uber_estimate && (
+                        <Group justify="space-between" wrap="nowrap">
+                          <Text size="xs" c="dimmed">
+                            Uber {travelPlan.uber_estimate.fare_display}
+                          </Text>
+                          <Button
+                            component="a"
+                            href={travelPlan.uber.universal_url}
+                            target="_blank"
+                            rel="noreferrer"
+                            variant="light"
+                            size="compact-xs"
+                            px="xs"
+                            leftSection={<IconExternalLink size={13} />}
+                          >
+                            Open Uber
+                          </Button>
+                        </Group>
+                      )}
+                    </>
+                  ) : (
+                    <Text size="sm" c="dimmed">
+                      Travel options are unavailable for this event.
                     </Text>
                   )}
-                </Card.Section>
+                </Stack>
               </Card>
             </Grid.Col>
           </Grid>
