@@ -5,11 +5,11 @@ import { Event } from "./pages/Event/Event";
 export const router = createBrowserRouter(
   [
     {
-      path: "/",
+      index: true,
       Component: Events,
     },
     {
-      path: ":eventId",
+      path: "/:eventId",
       Component: Event,
     },
   ],
