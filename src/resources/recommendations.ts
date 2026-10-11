@@ -61,7 +61,9 @@ const failed = async (what: string, res: Response): Promise<never> => {
 const registerGuest = async (): Promise<string> => {
   const handle = crypto.randomUUID();
   const res = await post("/api/v1/auth/register", {
-    email: `guest-${handle}@events-ui.local`,
+    // Not .local or .invalid: the API validates the domain and rejects the
+    // special-use TLDs outright (422).
+    email: `guest-${handle}@example.com`,
     password: handle,
   });
   if (!res.ok) return failed("Guest sign-in", res);
@@ -83,8 +85,15 @@ const saveEvent = async (
 ): Promise<{ id: number; token: string | null }> => {
   const stored = readToken();
   if (!stored) {
-    const guest = await post("/api/v1/events/save", dto);
-    if (guest.ok) return { id: (await guest.json()).id, token: null };
+    // The deployed API 500s here, and its 500s carry no CORS headers, so the
+    // browser rejects the fetch instead of handing back the status. Either way
+    // the signed-in path below is the fallback.
+    try {
+      const guest = await post("/api/v1/events/save", dto);
+      if (guest.ok) return { id: (await guest.json()).id, token: null };
+    } catch {
+      /* fall through to the guest account */
+    }
   }
 
   let token = stored ?? (await registerGuest());
