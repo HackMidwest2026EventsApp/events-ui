@@ -19,12 +19,14 @@
     "@mantine/modals": "^9.7.1",
     "@tabler/icons-react": "^3.49.0",
     "@tanstack/react-query": "^5.104.1",
+    "google": "^2.1.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-router": "^7.18.4"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@types/google.maps": "^3.66.6",
     "@types/node": "^24.13.3",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.7",
